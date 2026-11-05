@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { sql } from "../lib/db";
 import AddBookForm, { DeleteBookButton } from "./add-book-form";
+import Link from "next/dist/client/link";
 
 type Author = {
   id: number;
@@ -20,6 +21,7 @@ export default function Home() {
   return (
     <main className="mx-auto max-w-4xl p-6">
       <h1 className="mb-6 text-3xl font-bold">Shelfwise Books</h1>
+      <Link href="/members" className="mb-4 inline-block underline">Members</Link>
       <Suspense fallback={<p>Loading books…</p>}>
         <BooksList />
       </Suspense>
