@@ -1,36 +1,45 @@
 import { Suspense } from "react";
-import AddBookForm from "./add-book-form";
 import { sql } from "../lib/db";
+import AddBookForm, { DeleteBookButton } from "./add-book-form";
 
-
+type Author = {
+  id: number;
+  name: string;
+};
 
 type Book = {
   id: number;
   title: string;
+  author_id: number;
   author: string;
+  year: number | null;
   on_loan: boolean;
 };
 
 export default function Home() {
   return (
-    <Suspense fallback={<p>Loading books…</p>}>
-      <BooksList />
-    </Suspense>
+    <main className="mx-auto max-w-4xl p-6">
+      <h1 className="mb-6 text-3xl font-bold">Shelfwise Books</h1>
+      <Suspense fallback={<p>Loading books…</p>}>
+        <BooksList />
+      </Suspense>
+    </main>
   );
 }
 
 async function BooksList() {
-
-  const authors = await sql<{ id: number; name: string }[]>`
-  SELECT id, name
-  FROM authors
-  ORDER BY name
-`;
+  const authors = await sql<Author[]>`
+    SELECT id, name
+    FROM authors
+    ORDER BY name
+  `;
 
   const books = await sql<Book[]>`
     SELECT
       books.id,
       books.title,
+      books.author_id,
+      books.year,
       authors.name AS author,
       EXISTS (
         SELECT 1
@@ -44,34 +53,43 @@ async function BooksList() {
   `;
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <h1 className="mb-6 text-3xl font-bold">Shelfwise Books</h1>
+    <>
       <AddBookForm authors={authors} />
 
       {books.length === 0 ? (
         <p>No books in the library yet.</p>
       ) : (
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b">
-              <th scope="col" className="p-3">Title</th>
-              <th scope="col" className="p-3">Author</th>
-              <th scope="col" className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {books.map((book) => (
-              <tr key={book.id} className="border-b">
-                <td className="p-3">{book.title}</td>
-                <td className="p-3">{book.author}</td>
-                <td className="p-3">
-                  {book.on_loan ? "On loan" : "Available"}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b">
+                <th scope="col" className="p-3">Title</th>
+                <th scope="col" className="p-3">Author</th>
+                <th scope="col" className="p-3">Status</th>
+                <th scope="col" className="p-3">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {books.map((book) => (
+                <tr key={book.id} className="border-b">
+                  <td className="p-3">{book.title}</td>
+                  <td className="p-3">{book.author}</td>
+                  <td className="p-3">
+                    {book.on_loan ? "On loan" : "Available"}
+                  </td>
+                  <td className="p-3">
+                    <details>
+                      <summary className="cursor-pointer">Edit</summary>
+                      <AddBookForm authors={authors} book={book} />
+                    </details>
+                    <DeleteBookButton bookId={book.id} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </main>
+    </>
   );
 }
