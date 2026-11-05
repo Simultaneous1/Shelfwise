@@ -1,3 +1,4 @@
+import { lendBook, returnBook } from "./loan-actions";  
 import { Suspense } from "react";
 import { sql } from "../lib/db";
 import AddBookForm, { DeleteBookButton } from "./add-book-form";
@@ -15,6 +16,8 @@ type Book = {
   author: string;
   year: number | null;
   on_loan: boolean;
+  loan_id: number | null;
+  due_on: string | null;
 };
 
 export default function Home() {
@@ -35,22 +38,26 @@ async function BooksList() {
     FROM authors
     ORDER BY name
   `;
+  
+  const members = await sql<{ id: number; name: string }[]>`
+    SELECT id, name
+    FROM members
+    ORDER BY name, id
+  `;
 
-  const books = await sql<Book[]>`
+   const books = await sql<Book[]>`
     SELECT
       books.id,
       books.title,
       books.author_id,
       books.year,
       authors.name AS author,
-      EXISTS (
-        SELECT 1
-        FROM loans
-        WHERE loans.book_id = books.id
-          AND loans.returned_on IS NULL
-      ) AS on_loan
+      loans.id IS NOT NULL AS on_loan,
+      loans.id AS loan_id,
+      loans.due_on::text AS due_on
     FROM books
     JOIN authors ON authors.id = books.author_id
+    LEFT JOIN loans ON loans.book_id = books.id AND loans.returned_on IS NULL
     ORDER BY books.title, books.id
   `;
 
@@ -85,6 +92,29 @@ async function BooksList() {
                       <AddBookForm authors={authors} book={book} />
                     </details>
                     <DeleteBookButton bookId={book.id} />
+                                        {book.loan_id !== null ? (
+                      <form action={returnBook}>
+                        <input type="hidden" name="loanId" value={book.loan_id} />
+                        <p>Due {book.due_on}</p>
+                        <button type="submit" className="underline">Return</button>
+                      </form>
+                    ) : members.length > 0 ? (
+                      <form action={lendBook} className="mt-2 grid gap-1">
+                        <input type="hidden" name="bookId" value={book.id} />
+                        <label>
+                          Member
+                          <select name="memberId" required defaultValue="" className="ml-2 rounded border">
+                            <option value="" disabled>Choose a member</option>
+                            {members.map((member) => (
+                              <option key={member.id} value={member.id}>{member.name}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <button type="submit" className="w-fit underline">Lend</button>
+                      </form>
+                    ) : (
+                      <p>Add a member before lending.</p>
+                    )}
                   </td>
                 </tr>
               ))}
