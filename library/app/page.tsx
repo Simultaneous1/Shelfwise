@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-
+import AddBookForm from "./add-book-form";
 import { sql } from "../lib/db";
 
 
@@ -20,7 +20,13 @@ export default function Home() {
 }
 
 async function BooksList() {
-  
+
+  const authors = await sql<{ id: number; name: string }[]>`
+  SELECT id, name
+  FROM authors
+  ORDER BY name
+`;
+
   const books = await sql<Book[]>`
     SELECT
       books.id,
@@ -40,6 +46,7 @@ async function BooksList() {
   return (
     <main className="mx-auto max-w-3xl p-6">
       <h1 className="mb-6 text-3xl font-bold">Shelfwise Books</h1>
+      <AddBookForm authors={authors} />
 
       {books.length === 0 ? (
         <p>No books in the library yet.</p>
