@@ -19,6 +19,24 @@ export async function addBook(_previousMessage: string, formData: FormData) {
     return "Enter a whole year between 1 and 9999, or leave it blank.";
   }
 
+  const bookIdText = formData.get("bookId");
+  if (bookIdText !== null) {
+    const bookId = Number(bookIdText);
+    if (!Number.isInteger(bookId) || bookId < 1 || bookId > 2147483647) {
+      return "Invalid book.";
+    }
+
+    const updated = await sql`
+      UPDATE books SET title = ${title}, author_id = ${authorId}, year = ${year}
+      WHERE id = ${bookId} AND EXISTS (SELECT 1 FROM authors WHERE id = ${authorId})
+      RETURNING id
+    `;
+    if (!updated.length) return "Book or author no longer exists.";
+    revalidatePath("/");
+    revalidatePath("/loans");
+    return "Book updated.";
+  }
+
   const inserted = await sql`
     INSERT INTO books (title, author_id, year)
     SELECT ${title}, id, ${year}
@@ -31,4 +49,13 @@ export async function addBook(_previousMessage: string, formData: FormData) {
 
   revalidatePath("/");
   return "Book added.";
+}
+
+export async function deleteBook(formData: FormData) {
+  const bookId = Number(formData.get("bookId"));
+  if (!Number.isInteger(bookId) || bookId < 1 || bookId > 2147483647) return;
+
+  await sql`DELETE FROM books WHERE id = ${bookId}`;
+  revalidatePath("/");
+  revalidatePath("/loans");
 }

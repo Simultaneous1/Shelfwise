@@ -22,7 +22,7 @@ export default function AddBookForm({
   const [message, formAction, pending] = useActionState(addBook, "");
 
   return (
-    <form action={formAction} className="mb-8 grid gap-3 rounded border p-4">
+    <form action={formAction} className="book-form">
       {book ? (
         <input type="hidden" name="bookId" value={book.id} />
       ) : (
@@ -64,9 +64,9 @@ export function DeleteBookButton({ bookId }: { bookId: number }) {
       <input type="hidden" name="bookId" value={bookId} />
       <button
         type="button"
-        className="underline"
+        className="text-button"
         onClick={(event) => {
-          if (window.confirm("Delete this book and its loan records?")) {
+          if (window.confirm("Delete this book, its reservations, and its loan records?")) {
             event.currentTarget.form?.requestSubmit();
           }
         }}
